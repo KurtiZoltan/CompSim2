@@ -23,4 +23,4 @@ find_package(TIFF REQUIRED)
 #    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 #endif()
 
-add_executable(test ${SOURCE})
+add_executable(1d64-32laplace ./src/1d64-32laplace.cpp)
