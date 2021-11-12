@@ -5,3 +5,5 @@ build
 *.log
 *.out
 *.toc
+.vscode
+
