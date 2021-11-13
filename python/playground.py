@@ -2,6 +2,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.linalg.decomp_svd import null_space
 
+def multiply(p1, p2, order):
+    ret = []
+    for a in p1:
+        for b in p2:
+            newTerm = [a[0] * b[0], [x + y for x, y in zip(a[1], b[1])]]
+            found = False
+            for r in ret:
+                if r[1] == newTerm[1]:
+                    found = True
+                    r[0] += newTerm[0]
+            if not found and sum(newTerm[1]) <= order:
+                ret.append(newTerm)
+    return ret
+
 def factorial(i):
     if i == 0:
         return 1
@@ -130,7 +144,7 @@ def laplace(order, dim):
                 ret[i] = 1
     return ret
 
-def laplaceKernelsND(radius, dim):
+def laplaceKernelND(radius, dim):
     order = 2 * radius
     A = kernelNDMatrix(radius, order, dim)
     b = laplace(order, dim)
@@ -138,7 +152,27 @@ def laplaceKernelsND(radius, dim):
     nullSpace = null_space(A)
     return x, nullSpace
 
-
+def symmetricErrorLaplaceND(radius, dim):
+    order = 2 * radius + 2
+    x, nullspace = laplaceKernelND(radius, dim)
+    A = kernelNDMatrix(radius, order, dim)
+    b = derivatives(dim, order)
+    lap = laplace(order, dim)
+    a = [[x, y] for x, y in zip(lap, b)]
+    error = [[0, basis] for basis in b]
+    error[0][0] = 1
+    for i in range(radius + 1):
+        error = multiply(error, a, order)
+    error = np.array([x[0] for x in error])
+    P = np.eye(len(error)) - np.outer(error, error) / np.dot(error, error)
+    #A @ (x + nullspace @ t) - b = alpha * b ^ (order + 2)
+    #A @ x - b + A @ nullspace @ t = alpha * b ^ (order + 2)
+    #P @ A @ x - P @ b + P @ A @ nullspace @ t = 0
+    sphericalNullspace = null_space(P @ A @ nullspace)
+    t0, residuals, rank, s = np.linalg.lstsq(P @ A @ nullspace, P @ lap - P @ A @ x, rcond=None)
+    finalx = x + nullspace @ t0
+    finalNullspace = nullspace @ sphericalNullspace
+    return finalx, finalNullspace
 
 def smallestError2D(radius):
     order = radius * 2
@@ -174,7 +208,7 @@ def smallestError2D(radius):
     print(f"Final result for estimate:\n", list(filter(lambda x: abs(x[0]) > 1e-6, [[x, y] for x, y in zip(result, basis)])))
     return a0 + nullspace @ x
 
-def drawKesrnel2D(a, radius):
+def drawKernel2D(a, radius):
     coeffs = np.zeros((2*radius+1, 2*radius+1))
     for i in range(-radius, radius + 1):
         for j in range(-radius, radius + 1):
@@ -189,8 +223,11 @@ def drawKesrnel2D(a, radius):
     plt.colorbar()
     plt.show()
 
-radius = 2
-#a = smallestError2D(radius)
-#drawKernel2D(a, radius)
-x, nullspace = laplaceKernelsND(radius, 10)
-print(nullspace.shape)
+radius = 3
+dim = 2
+x, null = symmetricErrorLaplaceND(radius, dim)
+print(x)
+print(null)
+plt.imshow(kernelFromCoeffs(np.abs(x), radius, dim))
+plt.colorbar()
+plt.show()
