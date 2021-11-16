@@ -148,18 +148,18 @@ def laplaceKernelND(radius, dim):
     order = 2 * radius
     A = kernelNDMatrix(radius, order, dim)
     b = laplace(order, dim)
-    x, residuals, rank, s = np.linalg.lstsq(A, b, rcond=None)
-    nullSpace = null_space(A)
+    x, residuals, rank, s = np.linalg.lstsq(A, b, rcond=1e-6)
+    nullSpace = null_space(A, rcond=1e-6)
     return x, nullSpace
 
-def symmetricErrorLaplaceND(radius, dim):
+def symmetricErrorLaplaceKernelND(radius, dim):
     order = 2 * radius + 2
     x, nullspace = laplaceKernelND(radius, dim)
     A = kernelNDMatrix(radius, order, dim)
-    b = derivatives(dim, order)
+    basis = derivatives(dim, order)
     lap = laplace(order, dim)
-    a = [[x, y] for x, y in zip(lap, b)]
-    error = [[0, basis] for basis in b]
+    a = [[x, y] for x, y in zip(lap, basis)]
+    error = [[0, basis] for basis in basis]
     error[0][0] = 1
     for i in range(radius + 1):
         error = multiply(error, a, order)
@@ -168,10 +168,16 @@ def symmetricErrorLaplaceND(radius, dim):
     #A @ (x + nullspace @ t) - b = alpha * b ^ (order + 2)
     #A @ x - b + A @ nullspace @ t = alpha * b ^ (order + 2)
     #P @ A @ x - P @ b + P @ A @ nullspace @ t = 0
-    sphericalNullspace = null_space(P @ A @ nullspace)
-    t0, residuals, rank, s = np.linalg.lstsq(P @ A @ nullspace, P @ lap - P @ A @ x, rcond=None)
+    sphericalNullspace = null_space(P @ A @ nullspace, rcond=1e-6)
+    t0, residuals, rank, s = np.linalg.lstsq(P @ A @ nullspace, P @ lap - P @ A @ x, rcond=1e-6)
     finalx = x + nullspace @ t0
     finalNullspace = nullspace @ sphericalNullspace
+    nonsphericalError = P @ (A @ (x + nullspace @ t0) - lap)
+    nonsphericalError = [[x, y] for x, y in zip(nonsphericalError, basis)]
+    print(f"Non spherical error:")
+    for term in nonsphericalError:
+        if abs(term[0]) > 1e-10:
+            print(term)
     return finalx, finalNullspace
 
 def smallestError2D(radius):
@@ -183,8 +189,8 @@ def smallestError2D(radius):
         if diff == [2, 0] or diff == [0, 2]:
             b[i] = 1
 
-    nullspace = null_space(A)
-    a0, residuals, rank, s = np.linalg.lstsq(A, b, rcond=None)
+    nullspace = null_space(A, rcond=1e-6)
+    a0, residuals, rank, s = np.linalg.lstsq(A, b, rcond=1e-6)
 
     #print(f"Nullspace:\n", nullspace)
     #print(f"Particular solution:\n", a0)
@@ -224,10 +230,14 @@ def drawKernel2D(a, radius):
     plt.show()
 
 radius = 3
-dim = 2
-x, null = symmetricErrorLaplaceND(radius, dim)
-print(x)
-print(null)
-plt.imshow(kernelFromCoeffs(np.abs(x), radius, dim))
+dim = 3
+x, null = symmetricErrorLaplaceKernelND(radius, dim)
+print(f"x:\n", x)
+print(f"Null:\n", null)
+plt.imshow(kernelFromCoeffs(x, radius, dim)[radius])
 plt.colorbar()
+plt.show()
+
+plt.plot(x, ".")
+plt.grid()
 plt.show()

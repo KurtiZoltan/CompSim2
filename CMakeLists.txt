@@ -24,3 +24,4 @@ find_package(TIFF REQUIRED)
 #endif()
 
 add_executable(1d64-32laplace ./src/1d64-32laplace.cpp)
+add_executable(2dlaplacetest ./src/2dlaplacetest.cpp)
