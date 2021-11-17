@@ -229,15 +229,14 @@ def drawKernel2D(a, radius):
     plt.colorbar()
     plt.show()
 
-radius = 3
-dim = 3
+radius = 2
+dim = 2
 x, null = symmetricErrorLaplaceKernelND(radius, dim)
-print(f"x:\n", x)
+null = null.flatten()
+x += -x[-1] / null[-1] * null
+print(f"x:\n", x * 60)
 print(f"Null:\n", null)
-plt.imshow(kernelFromCoeffs(x, radius, dim)[radius])
+print(kernelFromCoeffs(x * 60, radius, dim))
+plt.imshow(kernelFromCoeffs(x, radius, dim))
 plt.colorbar()
-plt.show()
-
-plt.plot(x, ".")
-plt.grid()
 plt.show()
