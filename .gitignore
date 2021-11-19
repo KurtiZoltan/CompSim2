@@ -7,5 +7,6 @@ build3
 *.log
 *.out
 *.toc
+*.bak
 .vscode
 
