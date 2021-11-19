@@ -70,9 +70,12 @@
 	\centerline{\bf\LARGE Comparing linear PDE solvers}\vskip0.4truein
 	\centerline{\LARGE Computer simulations in physics}\vskip0.4truein
 	\centerline{\Large\sc Kürti Zoltán}\vskip0.10truein
-	%\centerline{\includegraphics[scale=0.5]{./elte_cimer_color.pdf}}
 	\vskip0.4truein
 	\centerline{\Large{\today}}
+	\begin{figure}[H]
+		\centering
+		\includegraphics[scale=4]{./figs/gaussian0191.pdf}
+	\end{figure}
 	\thispagestyle{empty}
 	\newpage
 	\tableofcontents
@@ -187,8 +190,8 @@
 		To sum it up, my general strategy is that I update the inner points of the region based on the differential equation, and I calculate the values at the boundary so that the boundary conditions are satisfied with the updated inner points. For Dirichlet type boundary conditions this means just setting the value at the boundary to the boundary condition, for Neumann type boundary condition this means setting the boundary point to the average of the nearby inner points. This method can be easily generalized to implement more complicated boundary conditions.
 		
 		To make this happen I needed a way to tell outer, inner and boundary points apart. The outer points can be determined by a user with a function: if the function returns a positive value for the coordinates of the point, it is an outer point. Otherwise a point is at the boundary if one of it's eight neighboring points is an outer point. The rest of the points don't have outer points as neighbors, can be updated using a 3x3 laplace stencil, they are the inner points. In case a bigger stencil is used, some of the inner points still need to be updated with a smaller stencil. The code that implements this ideas is the \texttt{allocateBoundary} function in the \texttt{timeEvolution.cpp} file. It fills up an array made of 8 bit values. Outer points are marked with 0, boundary points with 1 and inner points with 2 or higher values, depending on how big the stencils are that can be used with them as a center point.
-		
-		Two concrete examples are simulated with this code. Both of them have a circle as their boundary. The first one has Neumann boundary condition everywhere, physically this means perfect insulation. The starting temperature function is an off centered gaussian distribution. The integral of the initial temperature distribution is determined by what we choose the final temperature to be for an infinitely precise solution. (If the integral of the initial temperature distribution outside the circle is small, that is. I integrated the gaussian distribution over the whole plane.) The temperature of the center of the circle oer time is plotted in figure \ref{timepdf}. In this simulation I choose the final temperature to be $10$, which is well approximated by the simulation. The video of the simulation is uploaded to YouTube. \cite{gaussian}
+	\subsection{Examples}
+		Two concrete examples are simulated with this code. Both of them have a circle as their boundary, and both of them use the heat equation. The first one has Neumann boundary condition everywhere, physically this means perfect insulation. The starting temperature function is an off centered gaussian distribution. The integral of the initial temperature distribution is determined by what we choose the final temperature to be for an infinitely precise solution. (If the integral of the initial temperature distribution outside the circle is small, that is. I integrated the gaussian distribution over the whole plane.) The temperature of the center of the circle oer time is plotted in figure \ref{timepdf}. Using a more dense grid for the simuation does improve the accuracy of the final average temperature. The slight additional heat comes from applying the Neumann boundary condition: in this example after updating the inner points according to the laplacian the temperature near the boundary will increase. As the boundary points are set to the average of the nearby inner points, a small amount of additional heat is introduced as error. In this simulation I choose the final temperature to be $10$, which is well approximated by the simulation. The video of the simulation is uploaded to YouTube. \cite{gaussian}
 		\begin{figure}[H]
 			\centering
 			\includegraphics[scale=1]{./figs/time.pdf}
@@ -197,8 +200,8 @@
 		\end{figure}
 		
 		The other example was in a circle too, with mostly Neumann boundary conditions. However, two symmetric sections are changed to Dirichlet boundary conditions, one with temperature 20, the other with temperature 0. The starting temperature distribution was constant 0. The animation of this simulation can also be viewed on YouTube. \cite{conduction}
-	\section{Closing words}
-		
+	\section{Conclusion}
+		There are many ways in which this project could be continued. Probably my first choice would be to experiment with making the calculation of the laplacian more cash friendly, seeing improvements in runtime is always satisfying. Another big improement would be to port the stencil calculation code to C++, and use it for irregular discretizations, calculating the matrix corresponding to the laplacian as part of the initialization of the program. This would allow for experimenting with how the distribution of points affect the simulation, which is a question that interests me.
 	\bibliographystyle{abeld}
     \bibliography{ref}
 \end{document}
