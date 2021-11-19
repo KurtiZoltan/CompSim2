@@ -4,6 +4,7 @@
 #include <utility>
 #include <sstream>
 #include <iomanip>
+#include <fstream>
 #include "tiffio.h"
 
 //-------------------------------------------------------------------------------------------------
@@ -404,6 +405,16 @@ int main()
     }
     printTemperature(T, region, N, N, Tmin, Tmax, "start.tiff");
     
+    std::fstream coreTempFile;
+    std::stringstream ss2 = std::stringstream();
+    ss2 << exampleName << "CoreT.txt";
+    coreTempFile.open(ss2.str(), std::ios::out);
+    if (!coreTempFile.is_open())
+    {
+        std::cout << ss2.str() << " couldn't be opened.\n";
+        return 1;
+    }
+    
     //time evolution
     u32 frame = 0;
     f64 nextFrameTime = 0;
@@ -414,6 +425,7 @@ int main()
         {
             std::stringstream ss = std::stringstream();
             ss << exampleName << std::setw(4) << std::setfill('0') << frame++ << ".tif";
+            coreTempFile << t << " " << T[N / 2 * N + N / 2] << "\n";
             std::cout << "Frame " << frame << " done.\n";
             std::string s = ss.str();
             printTemperature(T, region, N, N, Tmin, Tmax, s);

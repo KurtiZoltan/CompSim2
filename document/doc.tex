@@ -178,10 +178,25 @@
 				\end{bmatrix}.\\
 			\end{aligned}
 		\end{equation}
+		The plot was generated with the \texttt{2d.py} file, and the data for the plot was generated with the \texttt{2dlaplacetest} executable.
 	\section{Boundary conditions, where numeric methods shine}
 		With simple linear differential equations like the heat equation, the only case when they may not have a simple analytic solution if they have complex boundary conditions. There is no particular solution of a differential equation without boundary conditions so it is a central topic. In practice boundary conditions are often complicated, neither Dirichlet nor Neumann, so it is worth spending time working on it.
 		
+		As I was searching for how others treat boundary conditions, I got my inspiration from this website. \cite{lectureNotes} In the problem they used they had a straight boundary with Neumann condition. Thy satisfied it by mirroring the solution to the boundary, and using the mirrored elements while calculating the finite differences at the boundary. This method can't be easily generalized to curved or straight but not aligned boundaries. However while reading this page I realized that maybe I can simply change the values at the boundary, and only update the inner points of the region according to the finite difference version of the differential equation.
 		
+		To sum it up, my general strategy is that I update the inner points of the region based on the differential equation, and I calculate the values at the boundary so that the boundary conditions are satisfied with the updated inner points. For Dirichlet type boundary conditions this means just setting the value at the boundary to the boundary condition, for Neumann type boundary condition this means setting the boundary point to the average of the nearby inner points. This method can be easily generalized to implement more complicated boundary conditions.
+		
+		To make this happen I needed a way to tell outer, inner and boundary points apart. The outer points can be determined by a user with a function: if the function returns a positive value for the coordinates of the point, it is an outer point. Otherwise a point is at the boundary if one of it's eight neighboring points is an outer point. The rest of the points don't have outer points as neighbors, can be updated using a 3x3 laplace stencil, they are the inner points. In case a bigger stencil is used, some of the inner points still need to be updated with a smaller stencil. The code that implements this ideas is the \texttt{allocateBoundary} function in the \texttt{timeEvolution.cpp} file. It fills up an array made of 8 bit values. Outer points are marked with 0, boundary points with 1 and inner points with 2 or higher values, depending on how big the stencils are that can be used with them as a center point.
+		
+		Two concrete examples are simulated with this code. Both of them have a circle as their boundary. The first one has Neumann boundary condition everywhere, physically this means perfect insulation. The starting temperature function is an off centered gaussian distribution. The integral of the initial temperature distribution is determined by what we choose the final temperature to be for an infinitely precise solution. (If the integral of the initial temperature distribution outside the circle is small, that is. I integrated the gaussian distribution over the whole plane.) The temperature of the center of the circle oer time is plotted in figure \ref{timepdf}. In this simulation I choose the final temperature to be $10$, which is well approximated by the simulation. The video of the simulation is uploaded to YouTube. \cite{gaussian}
+		\begin{figure}[H]
+			\centering
+			\includegraphics[scale=1]{./figs/time.pdf}
+			\caption{The time dependence of the middle point.}
+			\label{timepdf}
+		\end{figure}
+		
+		The other example was in a circle too, with mostly Neumann boundary conditions. However, two symmetric sections are changed to Dirichlet boundary conditions, one with temperature 20, the other with temperature 0. The starting temperature distribution was constant 0. The animation of this simulation can also be viewed on YouTube. \cite{conduction}
 	\section{Closing words}
 		
 	\bibliographystyle{abeld}
