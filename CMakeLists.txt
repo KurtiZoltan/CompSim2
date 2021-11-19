@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(CompSim1)
+project(CompSim2)
 
 set(CMAKE_CXX_STANDARD 17) #for aligned_alloc
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,8 +13,6 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_compile_options(-Wall -Wextra -pedantic -Wfatal-errors -fvisibility=hidden)
 endif()
 
-file(GLOB SOURCE "src/*.cpp" "src/*.hpp")
-
 find_package(TIFF REQUIRED)
 #find_package(OpenMP REQUIRED)
 #if (OPENMP_FOUND)
@@ -26,3 +24,5 @@ find_package(TIFF REQUIRED)
 add_executable(1d64-32laplace ./src/1d64-32laplace.cpp)
 add_executable(2dlaplacetest ./src/2dlaplacetest.cpp)
 add_executable(timeEvolution ./src/timeEvolution.cpp)
+target_link_libraries(timeEvolution PRIVATE ${TIFF_LIBRARIES})
+target_include_directories(timeEvolution PRIVATE ${TIFF_INCLUDE_DIR})

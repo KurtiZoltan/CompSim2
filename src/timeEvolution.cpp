@@ -2,6 +2,9 @@
 #include <iostream>
 #include <cmath>
 #include <utility>
+#include <sstream>
+#include <iomanip>
+#include "tiffio.h"
 
 //-------------------------------------------------------------------------------------------------
 //helper functions
@@ -223,30 +226,71 @@ void applyBoundary(f64* grid, u8* region, u32 n, u32 m, BoundaryElement* boundar
     }
 }
 
-void printTemperature(f64* T, u32 n, u32 m, f64 min, f64 max, const std::string& name)
+void printTemperature(f64* T, u8* region, u32 n, u32 m, f64 min, f64 max, const std::string& name)
 {
+    u8* image = new u8[n * m * 3];
     //https://stackoverflow.com/questions/20792445/calculate-rgb-value-for-a-range-of-values-to-create-heat-map
     for (u32 i = 0; i < n; i++)
     {
         for (u32 j = 0; j < m; j++)
         {
-            f64 t = T[j * n + i];
-            f64 ratio = 2 * (t - min) / (max - min);
-            u8 b = static_cast<u8>(std::max(0.0, 255 * (1 - ratio)));
-            u8 r = static_cast<u8>(std::max(0.0, 255 * (ratio - 1)));
-            u8 g = 255 - r - b;
-            
+            u8 b = 0;
+            u8 r = 0;
+            u8 g = 0;
+            if (region[j * n + i] > 0)
+            {
+                f64 t = T[j * n + i];
+                f64 ratio = 2 * (t - min) / (max - min);
+                ratio = std::max(0.0, ratio);
+                ratio = std::min(2.0, ratio);
+                b = static_cast<u8>(std::max(0.0, 255 * (1 - ratio)));
+                r = static_cast<u8>(std::max(0.0, 255 * (ratio - 1)));
+                g = 255 - r - b;
+            }
+            image[(j * n + i) * 3 + 0] = r;
+            image[(j * n + i) * 3 + 1] = g;
+            image[(j * n + i) * 3 + 2] = b;
         }
     }
+    TIFF* tif = TIFFOpen(name.c_str(), "w");
+    if (!tif)
+    {
+        std::cout << "TIFF could not be written, try creating the ../pic folder.\n";
+        throw 1;
+    }
+    TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, n);
+    TIFFSetField(tif, TIFFTAG_IMAGELENGTH, m);
+    TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, 3);
+    TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, 8);
+    TIFFSetField(tif, TIFFTAG_ORIENTATION, ORIENTATION_BOTLEFT);
+    TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
+    TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
+    TIFFSetField(tif, TIFFTAG_COMPRESSION, COMPRESSION_LZW);
+    for (u32 i = 0; i < m; i++)
+    {
+        TIFFWriteScanline(tif, image + i * (3 * n), i, 0);
+    }
+    TIFFClose(tif);
+    delete[] image;
 }
 //-------------------------------------------------------------------------------------------------
 
-u32 N = 1024;
-f64 R = 0.9;
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//CIRCLE WITH GAUSSIAN
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+std::string exampleName = "gaussian";
+u32 N = 400;
+f64 R = 0.95;
 f64 x_0 = 0;
-f64 y_0 = -0.5;
+f64 y_0 = -0.3;
 f64 sigma = 0.1;
 f64 Tfinal = 10;
+
+f64 animTime = 0.1;
+u32 frameCount = 30 * 20;
+f64 Tmin = 0;
+f64 Tmax = 20;
 
 bool circle(u32 i, u32 j)
 {
@@ -273,10 +317,68 @@ BoundaryElement circleBoundary(u32 i, u32 j)
     return ret;
 }
 
+f64 startT(f64 x, f64 y)
+{
+    return Tfinal * (M_PI * R * R) * 1 / (2 * M_PI * sigma * sigma) * std::exp(- ((x - x_0) * (x - x_0) + (y - y_0) * (y - y_0)) / (2 * sigma * sigma));
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//HEAT CONDUCTOR CIRCLE
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/*std::string exampleName = "conductor";
+u32 N = 400;
+f64 R = 0.95;
+
+f64 animTime = 2;
+u32 frameCount = 30 * 20;
+f64 Tmin = 0;
+f64 Tmax = 20;
+
+bool circle(u32 i, u32 j)
+{
+    //R = 0.9 circle in an NxN square of points representing the region [-1,1] x [-1,1]
+    f64 x = 2 * (static_cast<f64>(i) / (N - 1) - 0.5);
+    f64 y = 2 * (static_cast<f64>(j) / (N - 1) - 0.5);
+    return x * x + y * y < R * R;
+}
+
+BoundaryElement circleBoundary(u32 i, u32 j)
+{
+    BoundaryElement ret;
+    ret.i = i;
+    ret.j = j;
+    //Neumann type boundary condition for the circle
+    f64 x = 2 * (static_cast<f64>(i) / (N - 1) - 0.5);
+    f64 y = 2 * (static_cast<f64>(j) / (N - 1) - 0.5);
+    if (y > 0.4 && y < 0.9)
+    {
+        ret.type = 0; //Dirichlet
+        ret.value = x < 0 ? 20 : 0;
+    }
+    else
+    {
+        f64 nx = x;
+        f64 ny = y;
+        f64 norm = std::sqrt(nx * nx + ny * ny);
+        nx /= norm;
+        ny /= norm;
+        ret.type = 1; //Neumann type
+        ret.normal[0] = nx;
+        ret.normal[1] = ny;
+    }
+    return ret;
+}
+
+f64 startT(f64 x, f64 y)
+{
+    return 0;
+}*/
+
 int main()
 {
     f64 dx = 1.0 / (N - 1);
-    f64 dt = dx;
+    f64 dt = dx * dx / 4;
+    f64 frameTime = animTime / frameCount;
     //allocating arrays
     f64* T = allocateGrid<f64>(N, N); //temperature
     f64* laplace = allocateGrid<f64>(N, N); //storage for the laplace of the temperature
@@ -287,7 +389,7 @@ int main()
     auto ret = allocateBoundary(region, N, N, circleBoundary);
     BoundaryElement* boundary = ret.first;
     u32 boundaryCount = ret.second;
-    //init temperature with a unit gauss (x0, y0, sigma) times Tfinal / Area
+    //init temperature with a unit gauss (x0, y0, sigma) times Tfinal * Area
     for (u32 i = 0; i < N; i++)
     {
         for (u32 j = 0; j < N; j++)
@@ -296,18 +398,29 @@ int main()
             {
                 f64 x = 2 * (static_cast<f64>(i) / (N - 1) - 0.5);
                 f64 y = 2 * (static_cast<f64>(j) / (N - 1) - 0.5);
-                T[j * N + i] = Tfinal / (M_PI * R * R) * 1 / (2 * M_PI * sigma * sigma) * std::exp(- ((x - x_0) * (x - x_0) + (y - y_0) * (y - y_0)) / (2 * sigma * sigma));
+                T[j * N + i] = startT(x, y);
             }
         } 
     }
+    printTemperature(T, region, N, N, Tmin, Tmax, "start.tiff");
     
     //time evolution
     u32 frame = 0;
-    for (f64 t = 0; t < 1; t += dt, frame++)
+    f64 nextFrameTime = 0;
+    for (f64 t = 0; t < animTime; t += dt)
     {
-        std::cout << "Printing frame #" << frame << " time=" << t << "\n";
-        printTemperature(T, N, N);
+        //std::cout << " time=" << t << " core T=" << T[N / 2 * N + N / 2] << "\n";
+        if (nextFrameTime <= t)
+        {
+            std::stringstream ss = std::stringstream();
+            ss << exampleName << std::setw(4) << std::setfill('0') << frame++ << ".tif";
+            std::cout << "Frame " << frame << " done.\n";
+            std::string s = ss.str();
+            printTemperature(T, region, N, N, Tmin, Tmax, s);
+            nextFrameTime += frameTime;
+        }
         
+        //choose your favourite laplacian!
         laplace35(T, region, laplace, N, N, dx);
         //laplace3(T, region, laplace, N, N, dx);
         //laplace3ani(T, region, laplace, N, N, dx);
@@ -321,6 +434,7 @@ int main()
         }
         applyBoundary(T, region, N, N, boundary, boundaryCount);
     }
+    printTemperature(T, region, N, N, Tmin, Tmax, "stop.tiff");
     
     freeBoundary(boundary);
     freeGrid(region);
