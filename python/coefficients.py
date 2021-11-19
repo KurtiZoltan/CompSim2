@@ -23,6 +23,9 @@ def factorial(i):
         return i * factorial(i-1)
 
 def taylorPolinom(hs, order):
+    '''
+    returns the taylor polinum up to order at the position displaced by hs
+    '''
     derivatives = [0] * len(hs)
     ret = [[1, derivatives]]
     for direction, h in enumerate(hs):
@@ -47,6 +50,9 @@ def taylorPolinom(hs, order):
     return ret
 
 def derivatives(variableCount, order):
+    '''
+    returns the deriaties up to order listed in the same way as returned by taylorPolinom
+    '''
     derivatives = [0] * variableCount
     ret = [derivatives]
     for direction in range(variableCount):
@@ -70,6 +76,9 @@ def derivatives(variableCount, order):
     return ret
 
 def kernelPoints(radius, dim):
+    '''
+    up to mirroring returns the independent points of the stencil
+    '''
     if dim == 1:
         return [[i] for i in range(radius + 1)]
     else:
@@ -84,21 +93,33 @@ def kernelPoints(radius, dim):
     return ret
 
 def extendBySymmetry(positions, symmetryGenerator):
+    '''
+    appends to position the symmetry transformed elements of points
+    '''
     for p in positions:
         if symmetryGenerator(p) not in positions:
             positions.append(symmetryGenerator(p))
 
 def mirror(p, coordinate):
+    '''
+    mirrors the coordinate coordinate of point p
+    '''
     p[coordinate] *= -1
     return p
 
 def swap(p, i, j):
+    '''
+    swaps the ith and jth component of p
+    '''
     temp = p[i]
     p[i] = p[j]
     p[j] = temp
     return p
 
 def kernelNDMatrix(radius, order, dim):
+    '''
+    returns matrix A, where A @ coefficients of the stencil = coefficients of the taylor expansion
+    '''
     columns = []
     for position in kernelPoints(radius, dim):
         positionList = [position]
@@ -122,6 +143,9 @@ def kernel3DMatrix(radius, order):
     return kernelNDMatrix(radius, order, 3)
 
 def kernelFromCoeffs (a, radius, dim):
+    '''
+    returns the full stencil constructed from the independent elements of the stencil
+    '''
     ret = np.zeros(shape=[2*radius+1]*dim)
     points = kernelPoints(radius, dim)
     for idx in np.ndindex(ret.shape):
@@ -134,6 +158,9 @@ def kernelFromCoeffs (a, radius, dim):
     return ret
 
 def laplace(order, dim):
+    """
+    returns the derivatives corresponding to the laplace operator in the basis used by taylorPolinom
+    """
     basis = derivatives(dim, order)
     ret = np.zeros((len(basis)))
     for i, b in enumerate(basis):
@@ -145,6 +172,10 @@ def laplace(order, dim):
     return ret
 
 def laplaceKernelND(radius, dim):
+    '''
+    returns a particular solution for the independent coefficients of the stencil, and the nullspace
+    nullspace @ x does not contribute derivaties up to order 2 * radius + 1, it represents the freedom left to choose the stencil
+    '''
     order = 2 * radius
     A = kernelNDMatrix(radius, order, dim)
     b = laplace(order, dim)
@@ -153,6 +184,9 @@ def laplaceKernelND(radius, dim):
     return x, nullSpace
 
 def symmetricErrorLaplaceKernelND(radius, dim):
+    '''
+    same as laplaceKernelND with the additional constraint that the leading order error term will be proportional to a power of the laplace operator, meaning the error will be spherically symmetric in leading order.
+    '''
     order = 2 * radius + 2
     x, nullspace = laplaceKernelND(radius, dim)
     A = kernelNDMatrix(radius, order, dim)
@@ -181,6 +215,9 @@ def symmetricErrorLaplaceKernelND(radius, dim):
     return finalx, finalNullspace
 
 def smallestError2D(radius):
+    '''
+    not used in the final report
+    '''
     order = radius * 2
     A = kernel2DMatrix(radius, order)
     basis = derivatives(2, order)
@@ -214,29 +251,14 @@ def smallestError2D(radius):
     print(f"Final result for estimate:\n", list(filter(lambda x: abs(x[0]) > 1e-6, [[x, y] for x, y in zip(result, basis)])))
     return a0 + nullspace @ x
 
-def drawKernel2D(a, radius):
-    coeffs = np.zeros((2*radius+1, 2*radius+1))
-    for i in range(-radius, radius + 1):
-        for j in range(-radius, radius + 1):
-            i0 = abs(i)
-            j0 = abs(j)
-            if i0 > j0:
-                temp = i0
-                i0 = j0
-                j0 = temp
-            coeffs[i + radius, j + radius] = a[i0 * (radius + 1 + radius + 1 - (i0 - 1)) // 2 + j0 - i0]
-    plt.imshow(coeffs)
-    plt.colorbar()
-    plt.show()
-
 radius = 2
 dim = 2
 x, null = symmetricErrorLaplaceKernelND(radius, dim)
 null = null.flatten()
-x += -x[-1] / null[-1] * null
+x += -x[-1] / null[-1] * null # only use this if radius = 2 dim = 2 and you want to obtain a stencil that has 0 in the corners
 print(f"x:\n", x * 60)
 print(f"Null:\n", null)
-print(kernelFromCoeffs(x * 60, radius, dim))
+print(kernelFromCoeffs(x, radius, dim))
 plt.imshow(kernelFromCoeffs(x, radius, dim))
 plt.colorbar()
 plt.show()
