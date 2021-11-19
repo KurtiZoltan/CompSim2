@@ -208,10 +208,6 @@ def symmetricErrorLaplaceKernelND(radius, dim):
     finalNullspace = nullspace @ sphericalNullspace
     nonsphericalError = P @ (A @ (x + nullspace @ t0) - lap)
     nonsphericalError = [[x, y] for x, y in zip(nonsphericalError, basis)]
-    print(f"Non spherical error:")
-    for term in nonsphericalError:
-        if abs(term[0]) > 1e-10:
-            print(term)
     return finalx, finalNullspace
 
 def smallestError2D(radius):
@@ -256,8 +252,21 @@ dim = 2
 x, null = symmetricErrorLaplaceKernelND(radius, dim)
 null = null.flatten()
 x += -x[-1] / null[-1] * null # only use this if radius = 2 dim = 2 and you want to obtain a stencil that has 0 in the corners
-print(f"x:\n", x * 60)
+print(f"x:\n", x)
 print(f"Null:\n", null)
+print("The kernel:")
+print(f"1 / 60 *\n", kernelFromCoeffs(x * 60, radius, dim))
+plt.imshow(kernelFromCoeffs(x, radius, dim))
+plt.colorbar()
+plt.show()
+
+radius = 1
+dim = 2
+x, null = symmetricErrorLaplaceKernelND(radius, dim)
+null = null.flatten()
+print(f"x:\n", x)
+print(f"Null:\n", null)
+print("The kernel:")
 print(kernelFromCoeffs(x, radius, dim))
 plt.imshow(kernelFromCoeffs(x, radius, dim))
 plt.colorbar()

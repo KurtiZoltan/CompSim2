@@ -96,6 +96,7 @@
 		
 		Another great improvement could be the usage of single precision numbers. The discretization of the differential equation already introduces an error that can easily be bigger than single precision. Therefore to store the results of a calculation it ia probably enough to use single precision floating point numbers. The problem comes when the change of the solution is slow compared to the grid resolution (which is a desirable property if we want to minimize the error caused by discretization). The difference of two close floating point numbers will have a large error as the significant digits cancel out. This works against minimizing the discretization error. Increasing the precision of the number representation or using higher order approximations for the laplacian with smaller resolution may be two options to improve this situation.
 	\subsection{Precision, step size and error order}
+		\label{1dtest}
 		In one dimension the laplacion of $f$ can be calculated as
 		\begin{equation}
 			\Laplace f_i = \frac{f_{i+1} - 2f_i + f_{i-1}}{h^2} + \mathcal{O}(h^4)
@@ -121,12 +122,67 @@
 		
 		The first important structure is the taylor polynomial, used in many places in this code. It is represented by a list, each element of this list corresponds to a term in the taylor polynomial. Each term of the taylor polynomial is represented by a list, who's first element is the coefficient of the derivative, and the second term contains N integer numbers corresponding to the order of derivative in the $N$ different directions of the $N$ dimensional grid. The taylor polynomial corresponding to a stencil point is built up using $N$ repeated one dimensional taylor expansions. To do this I had to implement a polynomial multiplier function.
 		
-		Another important element of this file is the assumptions I made about the form of the stencils. First I assumed that they are symmetric to mirroring along each coordinate. This assumption works out because the laplace operator has this property. This assumption cancels out all the terms from the final result with odd derivatives.
-	\subsection{Testing the kernels}
+		Another important element of this file is the assumptions I made about the form of the stencils. First I assumed that they are symmetric to mirroring along each coordinate. This assumption works out because the laplace operator has this property. This assumption cancels out all the terms from the final result with odd derivatives. My second assumption was that it's symmetric under coordinate exchanges. This is a valid assumption, since exchanging coordinates is just a special case of a rotation or a rotation and a mirroring depending on the parity of the dimension.
 		
+		Solving for all the possible finite difference laplace operator is just a matter of solving linear set of equations, 
+		\begin{equation}
+			Ax_0=b,
+			\label{Axb}
+		\end{equation}
+		where $A$ is the matrix that produces the coefficients of the taylor polinom from the coefficients of the stencil. With a particular solution and a matrix $C$ who's columns span the null space of $A$ all of the stencil coefficients that give the laplace operator up to the specified order are of the form
+		\begin{equation}
+			x = x_0 + Ct,
+			\label{laplaceCoeffs}
+		\end{equation}
+		where $t$ is a parameter vector.
+		
+		The last calculation this file does is from this group of solutions choose the ones that are isotropic. These solutions are determined by the equation
+		\begin{equation}
+			A(x_0 + Ct) - b = \alpha b^{n}.
+		\end{equation}
+		$b^{n}$ are the taylor coefficients of the laplace operator to the $n$th power. This equation can be solved by multiplying the equation by a $P = I - b^{(n)} \circ b^{(n)} / b^{(n)} \cdot b^{(n)}$ projection matrix. This gives
+		\begin{equation}
+			PCt = - PAx_0 + Pb.
+		\end{equation}
+		The solution for $t$ from this equation is in general an affine space, similar to the situation in equation \ref{Axb}. These solutions determine the isotropic finite difference approximations of the laplace operator.
+	\subsection{Testing the stencils}
+		I picked three small stencils from the results of the previous section, and repeated a similar test to \ref{1dtest}. The difference was that this time I used a gaussian function as a test function, although I found that the results are not changed significantly as long as the test function has non zero higher order derivatives.The result is shown in figure \ref{2dpdf}.
+		\begin{figure}[H]
+			\centering
+			\includegraphics[scale=1]{./figs/2d.pdf}
+			\caption{The error of different laplace stencils as a function of the discretization.}
+			\label{2dpdf}
+		\end{figure}
+		The stencils I choose were
+		\begin{equation}
+			\begin{aligned}
+			S_3^{iso} =& 
+				\begin{bmatrix}
+					\frac{1}{6} & \frac{2}{3} & \frac{1}{6}\\
+					\frac{2}{3} & -\frac{5}{2} & \frac{2}{3}\\
+					\frac{1}{6} & \frac{2}{3} & \frac{1}{6}\\
+				\end{bmatrix},\\
+			S_3^{ani} =&
+				\begin{bmatrix}
+					0 & 1 & 0\\
+					1 & -4 & 0\\
+					0 & 1 & 0\\
+				\end{bmatrix},\\
+			S_5^{iso} =& \frac{1}{60}
+				\begin{bmatrix}
+					0 & -2 & -1 & -2 & 0\\
+					-2 & 16 & 52 & 16 & -2\\
+					-1 & 52 & -252 & 52 & -1\\
+					-2 & 16 & 52 & 16 & -2\\
+					0 & -2 & -1 & -2 & 0\\
+				\end{bmatrix}.\\
+			\end{aligned}
+		\end{equation}
 	\section{Boundary conditions, where numeric methods shine}
+		With simple linear differential equations like the heat equation, the only case when they may not have a simple analytic solution if they have complex boundary conditions. There is no particular solution of a differential equation without boundary conditions so it is a central topic. In practice boundary conditions are often complicated, neither Dirichlet nor Neumann, so it is worth spending time working on it.
 		
-	\section{Conclusion}
+		
+	\section{Closing words}
 		
 	\bibliographystyle{abeld}
     \bibliography{ref}
