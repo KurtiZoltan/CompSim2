@@ -82,8 +82,6 @@ void laplace(T* gridIn, T* gridOut, u32 n, u32 m, T h, T* kernel, u32 kernelRadi
             gridOut[j * n + i] = temp / h / h;
         }
     }
-    //edge calculations but still with the high order kernel, might cause weird artifacts on the edge
-    //tbd
 }
 
 template <typename T>
@@ -96,7 +94,7 @@ void printGrid(T* grid, u32 n, u32 m, const std::string fileName)
         std::cout << "File '" << fileName << "' couldn't be opened.\n";
         return;
     }
-    file << std::setprecision(std::numeric_limits<T>::digits10 + 1);
+    file << std::setprecision(16);
     for (u32 i = 0; i < n; i++)
     {
         for (u32 j = 0; j < m; j++)
@@ -162,7 +160,7 @@ void test(u32 N, std::fstream& file)
     laplace(testFunction, numeric, N, N, h, kernel2a, kernel2Radius);
     T errorc = calcError(numeric, exact, N);
     
-    file << N << " " << std::setprecision(std::numeric_limits<T>::digits10 + 1) << errora << " " << errorb << " " << errorc << "\n";
+    file << N << " " << std::setprecision(16) << errora << " " << errorb << " " << errorc << "\n";
     
     freeGrid(numeric);
     freeGrid(exact);

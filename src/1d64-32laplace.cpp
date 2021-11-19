@@ -76,8 +76,8 @@ void test(u32 N, std::ostream& os)
 int main()
 {
     u32 pointNum = 1000;
-    u32 minPoints = 10;
-    u32 maxPoints = 1000000;
+    u32 minPoints = 18;
+    u32 maxPoints = 50000;
     f32 scale = std::log(maxPoints / minPoints) / pointNum;
     std::fstream file;
     

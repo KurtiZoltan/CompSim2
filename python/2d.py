@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-'''exact = np.loadtxt("./build/exact.txt").transpose()
+exact = np.loadtxt("./build/exact.txt").transpose()
 numerica = np.loadtxt("./build/numerica.txt").transpose()
 numericb = np.loadtxt("./build/numericb.txt").transpose()
 numericc = np.loadtxt("./build/numericc.txt").transpose()
@@ -22,7 +22,7 @@ diff = np.abs(numericc - exact)[2:-3, 2:-3]
 print("c:", np.sum(diff) / np.prod(diff.shape))
 plt.imshow(np.abs(numericc - exact)[2:-3, 2:-3], origin="upper")
 plt.colorbar()
-plt.show()'''
+plt.show()
 
 floatData = np.loadtxt("./build/2dlaplaceFloat.txt").transpose()
 plt.plot(floatData[0],floatData[1])
