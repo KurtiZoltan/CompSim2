@@ -260,7 +260,7 @@ plt.imshow(kernelFromCoeffs(x, radius, dim))
 plt.colorbar()
 plt.show()
 
-radius = 1
+radius = 3
 dim = 2
 x, null = symmetricErrorLaplaceKernelND(radius, dim)
 null = null.flatten()
